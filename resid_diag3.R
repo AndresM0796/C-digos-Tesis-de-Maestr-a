@@ -1,6 +1,73 @@
 ## *** Diagnostic analysis for linear mixed models fitted via library nlme 
 ## *** Authors: Francisco Marcelo M. Rocha, Juvencio S. Nobre and Julio M. Singer
 
+#####################################################################################################################
+## This function generates the following diagnostic plots for gaussian linear mixed models fitted via function lme ##
+## in library nlme.                                                                                                ##
+#####################################################################################################################
+
+# plot 1: Modified Lesaffre-Verbeke index versus unit indices
+# plot 2: Standardized marginal residuals versus fitted values and corresponding histogram
+# plot 3: Mahalanobis distance versus unit indices
+# plot 4: Chi-squared QQ plot for Mahalanobis distance
+# plot 5: Standardized conditional residuals versus fitted values and corresponding histogram
+# plot 6: Normal QQ plot and histogram for standardized least confounded conditional residuals
+# plot 7: Cook's Conditional distance versus observation indices
+# plot 8: Cook's Conditional distance 1 (D1i) versus observation indices
+# plot 9: Cook's Conditional distance 2 (D2i) versus observation indices
+# plot 10: Cook's Conditional distance 3 (D3i) versus observation indices
+# plot 11: Generalized joint leverage (L) versus unit indices
+# plot 12: Generalized marginal leverage (L1) versus unit indices
+# plot 13: Generalized random component leverage (L2) versus unit indices
+# plot 14: Generalized joint leverage [Li(jj)] versus observation indices
+# plot 15: Generalized marginal leverage [L1i(jj)] versus observation indices
+# plot 16: Generalized random component leverage [L2i(jj)] versus observation indices
+
+#################################################################################################################
+## 1. The data must be arranged in the LONG format, with units indexed by a numerical (not necessarily equally ##
+##    spaced) variable expressed as a factor.                                                                  ##
+## 2. The horizontal axis contains either the unit indices or the observation indices                          ##
+## 3. The outliers are labelled in the format unit.obs (e.g. 13.5 denotes the fifth observation of unit        ##
+##    labelled 13)                                                                                             ##
+#################################################################################################################
+
+## An example is
+
+## dataset<-groupedData(response ~  time|id, data=dataset_label)
+## model1<-lme(response ~ time, random = ~time|id, na.action=na.omit, data=dataset)  
+        # use of the function lme in nlme to fit a mixed model 
+## resid1<-residdiag.nlme(model1,limit=2,plotid=1:16)
+        # the computed quantities will be saved in the object labelled resid1
+        # the limit option indicates cutpoints for the residual plots
+        # plotid indicates the required residual plots
+## names(resid1)  
+        # produces the labels of the quantities saved in resid1 (i.e.: mat.Z = Z, mat.X = X, Gam, R)
+        # The model is : Y = X \beta + Z b + e
+        # Var(Y) = V = Z Gam Z^\top + R
+## resid1$least.confounded.residuals   
+        # produces the least confounded standardized conditional residuals
+
+
+###############################################################################################################
+## *** References:                                                                                           ##
+##                                                                                                           ##
+##  - Singer, J.M., Nobre, J.S. and Rocha, F.M.M. (2017). Graphical tools for detecting departures from      ##
+##        linear mixed models assumptions and some remedial measures.                                        ##
+##        International Statistical Review, 85, 290-324.                                                     ##
+##        doi:10.1111/insr.12178                                                                             ##
+##  - Nobre, J.S. and Singer, J.M. (2007). Residual Analysis for Linear Mixed Models.                        ##
+##        Biometrical Journal, 49, 1-13.                                                                     ##
+##  - Nobre, J.S. and Singer, J.M. (2011). Leverage analysis for linear mixed models.                        ##
+##        Journal of Applied Statistics, 38, 1063-1072.                                                      ##
+##  - Pinheiro, J.C. and Bates, D.M. (2000). Mixed-effects models in S and S-plus. 1st edition.              ##
+##        New York: Springer                                                                                 ##
+##  - Scheipl, F., Greven, S. and Kuechenhoff, H. (2008) Size and power of tests for a zero random effect    ##
+##       variance or polynomial regression in additive and linear mixed models.                              ##
+##       Computational Statistics & Data Analysis, 52: 3283--3299.                                           ##
+##                                                                                                           ##
+###############################################################################################################
+
+
 residdiag3.nlme = function(fit, limit,plotid=NULL) {
   require(MASS) 
   require(Matrix)
@@ -306,11 +373,11 @@ residdiag3.nlme = function(fit, limit,plotid=NULL) {
     }
   }
   
-  #### Construcción de la matríz de covarianza de Y, aquí es V, en el paper es \Omega
+  #### ConstrucciÃ³n de la matrÃ­z de covarianza de Y, aquÃ­ es V, en el paper es \Omega
   V <- (Z %*% Gam %*% t(Z)) + R
   iV <- solve(V)                                                
   
-  #### Construcción de la matriz Q ####
+  #### ConstrucciÃ³n de la matriz Q ####
   varbeta <- solve((t(X) %*% iV %*% X))
   Q <- (iV - iV %*% X %*% (varbeta) %*% t(X) %*% iV ) 
   zq <- t(Z) %*% Q
@@ -320,7 +387,7 @@ residdiag3.nlme = function(fit, limit,plotid=NULL) {
   eblue <- as.vector(fixef(fit))
   eblup <- Gam %*% t(Z) %*% iV %*% (y - X %*% eblue)
   
-  #### Análisis de residuos ####
+  #### AnÃ¡lisis de residuos ####
   predm <- X %*% eblue                       # Predicted values for expected response
   predi <- X %*% eblue + Z %*% eblup         # Predicted values for units
   resm <- (y - predm)                        # Marginal residuals
@@ -335,7 +402,7 @@ residdiag3.nlme = function(fit, limit,plotid=NULL) {
   #### Varianza de los residuos condicionales ####
   var.resc <- R %*% Q %*% R
   
-  #### Fracción de confundimiento ####
+  #### FracciÃ³n de confundimiento ####
   ident <- diag(N)
   auxnum <- (R %*% Q %*% Z %*% Gam %*% t(Z) %*% Q %*% R)
   auxden <- R %*% Q %*% R
@@ -388,7 +455,7 @@ residdiag3.nlme = function(fit, limit,plotid=NULL) {
   LSdm <- as.numeric(quantile(dm,prob = 0.75) + 1.5*(quantile(dm,prob = 0.75) - quantile(dm,prob = 0.25)))
   LS2dm <- 2*mean(dm)
   
-  #### Índice modificado de Lesaffre-Verbeke ####
+  #### Ãndice modificado de Lesaffre-Verbeke ####
   lesverb <- rep(0,length(CCind)) 
   auxni <- as.vector(vecni)
   for (t in 1:length(CCind)) { 
@@ -476,7 +543,7 @@ residdiag3.nlme = function(fit, limit,plotid=NULL) {
   # trace.L2d<- sum(L2d)
   LSL2i <- as.numeric(quantile(L2i,prob = 0.75) + 1.5*(quantile(L2i,prob = 0.75) - quantile(L2i,prob = 0.25)))
   
-  #### Función que construye QQ plots para normalidad de los efectos aleatorios ####
+  #### FunciÃ³n que construye QQ plots para normalidad de los efectos aleatorios ####
   qqPlot2 <- function(x, distribution="norm", ..., ylab=deparse(substitute(x)),
                       xlab=paste(distribution, "quantiles"), main = NULL, 
                       las = par("las"),
@@ -530,7 +597,7 @@ residdiag3.nlme = function(fit, limit,plotid=NULL) {
     }
   }
   
-  #### Función que construye los gráficos de diagnóstico
+  #### FunciÃ³n que construye los grÃ¡ficos de diagnÃ³stico
   plotg = function(plotid){
     cat("\n To select the graphic use plotid \n
 1- Modified Lesaffre-Verbeke index versus unit indices
